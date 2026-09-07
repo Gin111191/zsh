@@ -12,9 +12,10 @@ ZVM_VI_HIGHLIGHT_BACKGROUND=none
 ZVM_VI_HIGHLIGHT_FOREGROUND=none
 ZVM_VI_HIGHLIGHT_EXTRASTYLE=none
 
-# zsh-vi-mode resets all bindings on init, so custom bindings
-# must be registered via this hook to survive.
-zvm_after_init() {
+# zsh-vi-mode resets all bindings on init, so custom bindings must be
+# registered after it loads. plugins.zsh calls this from zvm_after_init;
+# defining zvm_after_init here too would be silently overwritten.
+_my_bindings() {
   # Ctrl+Right -> move forward one word (^[[1;5C is the terminal escape code)
   bindkey '^[[1;5C' forward-word
 

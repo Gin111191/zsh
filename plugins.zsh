@@ -30,4 +30,5 @@ _zplugin_load jeffreytse zsh-vi-mode
 zvm_after_init() {
     _zplugin_load zdharma-continuum fast-syntax-highlighting
     eval "$(starship init zsh)"
+    _my_bindings
 }
