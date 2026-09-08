@@ -191,6 +191,20 @@ acceptable only because you are almost never outside tmux.
 it for `gp`/`gP`, mirroring vim's `"+p`), with a fallback to `$CUTBUFFER` so an
 empty clipboard never makes `p` look like a dead key.
 
+Binding `vicmd` keys is trickier than it looks, and both traps fail **silently**:
+
+- `zvm_bindkey` does not bind anything while `ZVM_LAZY_KEYBINDINGS` is on (the default).
+  For any keymap other than `viins` it just appends to `ZVM_LAZY_KEYBINDINGS_LIST` and
+  returns, and that list has already been consumed by the time `zvm_after_init` runs.
+- A plain `bindkey -M vicmd` in `zvm_after_init` does apply — and then the **first `Esc`**
+  wipes it, because that is when zsh-vi-mode replays the lazy list over the whole keymap.
+  Check it right after opening a shell and the binding looks correct; press `Esc` once and
+  it is back to `vi-put-after`.
+
+So the `vicmd` bindings live in `_my_vicmd_bindings`, called from the plugin's
+`zvm_after_lazy_keybindings` hook — which runs immediately after that replay — and also
+from `_my_bindings` for the case where someone turns lazy keybindings off.
+
 **Cost:** 3.8 ms per paste — `tmux save-buffer` talks to the local tmux server over
 a unix socket, so SSH adds no network round-trip. It is twice as fast as `pbpaste`
 (7.9 ms). Shell startup pays one ~4 ms probe for the `-w` flag (tmux ≥ 3.2).
