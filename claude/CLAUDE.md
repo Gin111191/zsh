@@ -35,11 +35,14 @@ delta, sd, hyperfine, dust, duf, procs, tldr, watchexec, direnv, mise, cargo.
 - `plugins/zsh-vi-mode/zsh-vi-mode.zsh` contains a NUL byte: `grep` treats it as
   binary and silently prints nothing. Use `rg` (or `grep -a`) on that file.
 - `lf` is not installed here, though `aliases.zsh` defines an `lf()` wrapper.
-- WSLg is broken: weston crash-loops with SIGSEGV every ~102 s (259 times since boot,
-  2026-09-08). So there is no working Wayland or X11 display — `wl-copy`, `wl-paste`,
-  `xdpyinfo` and any Linux GUI app all fail or hang. `wl-clipboard` is installed but
-  inert. Do not propose GUI or clipboard solutions that need a display; use tmux
-  buffers, and check `rg -c 'signal 11' /mnt/wslg/stderr.log` before assuming otherwise.
+- The terminal is **conhost**, the legacy Windows console — not Windows Terminal. It
+  ignores OSC 52 silently, so anything relying on the terminal to set the host clipboard
+  fails without an error. `clip.exe` (37 ms) is the working path to the Windows clipboard;
+  `powershell.exe -NoProfile -Command Get-Clipboard` (212 ms) reads it back.
+- WSLg is broken: weston crash-loops with SIGSEGV every ~102 s (259 times in one day's
+  uptime, 2026-09-08). There is no working Wayland or X11 display — `wl-copy`, `wl-paste`,
+  `xdpyinfo` and every Linux GUI app fail or hang; `wl-clipboard` is installed but inert.
+  Do not propose anything that needs a display.
 
 ## Machine: macOS
 - Not surveyed yet. Fill this in from that machine before relying on it.

@@ -32,30 +32,47 @@ if [[ -n $TMUX ]]; then
 fi
 
 # Ngoài tmux: để trống thì zvm_clipboard_detect tự dò pbcopy / wl-copy / xclip.
+
+# =========================================================
+# WSL: OSC 52 KHÔNG tới được clipboard Windows
+# =========================================================
 #
-# WSL: bốn thứ plugin dò (pbcopy, wl-copy, xclip, xsel) mặc định KHÔNG có cái nào,
-# và nó đòi phải set được CẢ copy lẫn paste mới coi clipboard là dùng được — nên
-# ngoài tmux là mất hẳn. clip.exe tuy có sẵn nhưng plugin không dò tới. Cách gọn
-# nhất VỀ LÝ THUYẾT là wl-clipboard: WSLg có cầu clipboard sang Windows và plugin
-# tự nhận wl-copy/wl-paste, không cần thêm dòng config nào.
-#     sudo apt install wl-clipboard
+# Cờ -w ở trên bảo tmux đẩy tiếp qua OSC 52 về clipboard của máy đang ngồi.
+# Trên GIN-PC điều đó im lặng không xảy ra: terminal là conhost (console cũ của
+# Windows, không phải Windows Terminal) và conhost không cài đặt OSC 52. Đã bắn
+# thẳng escape \033]52 vào tty của tmux client, bỏ qua tmux — clipboard Windows
+# vẫn không đổi. Phía tmux thì đã đúng hết (set-clipboard on, terminal-features
+# xterm*:clipboard, capability Ms có mặt), lỗi nằm ở đầu nhận.
 #
-# NHƯNG nó cần một compositor Wayland còn sống. Đã thử trên GIN-PC (2026-09-08):
-# weston crash-loop, SIGSEGV mỗi ~102s, 259 lần tính từ lúc boot -> wl-copy báo
-# "compositor does not seem to implement seat", wl-paste báo "Connection refused",
-# XWayland cũng treo. Cài xong vẫn vô dụng cho tới khi sửa WSLg.
-# Xem README > Troubleshooting.
+# Vá bằng cách ghi SONG SONG hai nơi: tmux buffer vẫn lo `p` giữa các pane (5ms),
+# thêm clip.exe lo Ctrl+V trong app Windows (37ms). Đã thử clip.exe với UTF-8
+# tiếng Việt có dấu và văn bản nhiều dòng: đúng nguyên vẹn.
 #
-# Không chọn đường clip.exe + powershell Get-Clipboard: đo trên GIN-PC là 212ms
-# mỗi lần dán (tmux 5ms) — đủ chậm để thấy khựng ở từng phím p.
-#
-# => Kết luận: nhánh tmux là nhánh dùng được thật. Ngoài tmux, trên WSL hiện chưa
-#    có đường nào vừa nhanh vừa hai chiều.
+# (Đã thử wl-clipboard trước đó: vô dụng ở đây vì weston của WSLg crash-loop —
+#  xem README > Troubleshooting. Nhưng nó cũng không phải thứ cần: đường đồng bộ
+#  ra Windows không đi qua WSLg.)
+if [[ -n $WSL_DISTRO_NAME ]] && (( $+commands[clip.exe] )); then
+  _zvm_wsl_copy() {
+    local buf=$(cat)
+    [[ -n $TMUX ]] && print -rn -- "$buf" | tmux load-buffer -w - 2>/dev/null
+    print -rn -- "$buf" | clip.exe
+  }
+  ZVM_CLIPBOARD_COPY_CMD='_zvm_wsl_copy'
+
+  # Ngoài tmux không còn kho nhanh nào để đọc, mà plugin đòi có CẢ paste mới
+  # chịu chạy copy (zvm_clipboard_available cần cả hai biến). Đọc thẳng clipboard
+  # Windows: 212ms — chậm, nhưng chỉ rơi vào nhánh này khi không có tmux.
+  if [[ -z $TMUX ]]; then
+    ZVM_CLIPBOARD_PASTE_CMD='powershell.exe -NoProfile -Command Get-Clipboard 2>/dev/null | tr -d "\r"'
+  fi
+fi
 
 # GIỚI HẠN ĐÃ BIẾT
 #   - `yy` mất ký tự xuống dòng cuối: $( ) của shell cắt trailing newline.
 #     Trên dòng lệnh thì thường là điều mình muốn.
-#   - OSC 52 chỉ MỘT CHIỀU (ghi). Copy từ trình duyệt rồi `p` trong shell sẽ
-#     không ra nội dung đó — chỗ đó vẫn phải Cmd+V / Ctrl+Shift+V.
+#   - Chiều Windows -> shell KHÔNG đi qua `p`. Trong tmux, `p` đọc tmux buffer
+#     chứ không đọc clipboard Windows. Copy từ trình duyệt rồi dán vào shell thì
+#     dùng chuột phải / Ctrl+Shift+V của terminal (đã chạy sẵn, không cần config).
+#     Không bắt `p` đọc clipboard Windows vì powershell Get-Clipboard mất 212ms.
 #   - Cần `set -g set-clipboard on` bên tmux thì OSC 52 mới đi được.
 #     tmux-config (github.com/Gin111191/tmux-config) đã bật sẵn.

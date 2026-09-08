@@ -163,11 +163,29 @@ One yank then reaches everywhere:
 |---|---|---|
 | zsh vi-mode, pane A | zsh vi-mode, pane B (`p`) | ✓ |
 | zsh vi-mode | any pane, `prefix + ]` | ✓ |
-| zsh vi-mode | a GUI app on the local machine (`Cmd+V`) | ✓ via OSC 52 |
+| zsh vi-mode | a GUI app on the local machine | ✓ — via OSC 52, or `clip.exe` on WSL |
 | tmux copy-mode (`y`) | zsh vi-mode (`p`) | ✓ |
 
 The tmux branch is **OS-independent** — macOS, Linux over SSH and WSL all use the
-same two lines. No `clip.exe`, no `xclip`, no OS detection.
+same two lines for the cross-pane store. No `xclip`, no OS detection.
+
+Reaching the *host* clipboard is the part that is not universal. `-w` makes tmux emit
+OSC 52, and the terminal emulator has to act on it. Windows Terminal, iTerm2, WezTerm and
+kitty do; **conhost — the legacy Windows console — does not**, and it fails silently. So on
+WSL `clipboard.zsh` writes to both stores instead:
+
+```zsh
+_zvm_wsl_copy() {                      # measured on GIN-PC:
+  local buf=$(cat)
+  print -rn -- "$buf" | tmux load-buffer -w -   # cross-pane `p`  →  5 ms
+  print -rn -- "$buf" | clip.exe                # Ctrl+V in Windows → 37 ms
+}
+```
+
+`clip.exe` handles UTF-8 (Vietnamese diacritics included) and multi-line text correctly.
+Outside tmux there is no fast store left to read, and the plugin refuses to copy unless a
+paste command is set too, so that branch falls back to `powershell Get-Clipboard` — 212 ms,
+acceptable only because you are almost never outside tmux.
 
 `bindings.zsh` rebinds `p`/`P` to that shared store (the plugin normally reserves
 it for `gp`/`gP`, mirroring vim's `"+p`), with a fallback to `$CUTBUFFER` so an
@@ -177,43 +195,49 @@ empty clipboard never makes `p` look like a dead key.
 a unix socket, so SSH adds no network round-trip. It is twice as fast as `pbpaste`
 (7.9 ms). Shell startup pays one ~4 ms probe for the `-w` flag (tmux ≥ 3.2).
 
-**Limits:** `yy` loses its trailing newline (`$( )` strips it). OSC 52 is
-write-only, so copying in a browser and pressing `p` in the shell will not work —
-use `Cmd+V` for that direction. Needs `set -g set-clipboard on` in tmux, which
+**Limits:** `yy` loses its trailing newline (`$( )` strips it). The Windows/host → shell
+direction does not go through `p`: inside tmux `p` reads the tmux buffer, not the host
+clipboard. Paste that direction with the terminal's own right-click / `Ctrl+Shift+V`, which
+needs no config. Needs `set -g set-clipboard on` in tmux, which
 [tmux-config](https://github.com/Gin111191/tmux-config) already sets.
 
 ## Troubleshooting
 
-**Outside tmux on WSL, yank never reaches the Windows clipboard.**
+**Yank in zsh never reaches the Windows clipboard.**
 
-`zvm_clipboard_detect` only looks for `pbcopy`, `wl-copy`, `xclip` and `xsel`, and it needs
-*both* a copy and a paste command before it treats the clipboard as usable. `clip.exe` exists
-on WSL but the plugin never looks for it. So `wl-clipboard` is the fix — *provided WSLg's
-compositor is alive*.
-
-Check that first:
+`-w` only asks tmux to emit OSC 52; the terminal has to implement it. Check whether yours
+does by writing the escape straight to the tty, bypassing tmux:
 
 ```sh
-wl-copy </dev/null && echo ok        # "does not seem to implement seat" => weston is down
-rg -c 'signal 11' /mnt/wslg/stderr.log   # count of compositor crashes since boot
+printf '\033]52;c;%s\a' "$(printf test-osc52 | base64 -w0)" > $(tmux display -p '#{client_tty}')
+powershell.exe -NoProfile -Command Get-Clipboard    # still the old value => not supported
 ```
 
-On GIN-PC (2026-09-08) weston was crash-looping with SIGSEGV every ~102 s — 259 times since
-boot — so wl-clipboard, XWayland and every Linux GUI app were all dead. `weston.log` showed the
-rdprail app-list scan retrying two icons that do not exist on disk, then dying:
+On GIN-PC it is not supported: the terminal is **conhost**, the legacy Windows console (no
+`WindowsTerminal.exe` in the process list), and conhost ignores OSC 52 without error. Every
+piece on the tmux side was already correct — `set-clipboard on`, `terminal-features[0]
+xterm*:clipboard`, and capability `Ms` present in `tmux info` — so nothing there was worth
+changing. `clipboard.zsh` routes around it with `clip.exe`, see *Shared clipboard*.
 
+Switching to Windows Terminal would make the OSC 52 path work and the `clip.exe` branch
+redundant — it is kept because it costs 37 ms and works on any Windows console.
+
+**wl-clipboard does nothing on this box.**
+
+Unrelated to the above, and not needed for it — the host-clipboard path never touches WSLg.
+Noted only so it is not investigated twice: WSLg's compositor is dead here. `weston`
+crash-loops with SIGSEGV every ~102 s (259 times in one day's uptime), so `wl-copy` reports
+*"compositor does not seem to implement seat"*, `wl-paste` gets *"Connection refused"* and
+`xdpyinfo` hangs. Linux GUI apps do not run either.
+
+```sh
+rg -c 'signal 11' /mnt/wslg/stderr.log   # crash count since boot
 ```
-retry_find_icon_file: icon (/usr/local/cuda-13.1/libnvvp/icon.xpm) retry count (4)
-free_app_entry(): (null): /usr/share/applications/openjdk-25-java.desktop
-```
 
-`nvvp.desktop` and `nsight.desktop` (CUDA 13.1) point at `icon.xpm` files that were never
-installed. Suggestive, not proven. Try `wsl --shutdown` from Windows first; if the loop comes
-back, move those two `.desktop` files aside and watch the crash count.
-
-Not worth routing around it with `clip.exe` + `powershell Get-Clipboard`: measured at 212 ms per
-paste against tmux's 5 ms, which is a visible stutter on every `p`. Inside tmux the shared
-clipboard works regardless — that path does not touch WSLg at all.
+`weston.log` shows it dying right after the rdprail app-list scan retries two icons that are
+not on disk — `nvvp.desktop` and `nsight.desktop` (CUDA 13.1) point at `icon.xpm` files that
+were never installed. Suggestive, not proven. `wsl --shutdown` first; if the loop returns,
+move those two `.desktop` files aside and watch the count.
 
 ## Updating plugins
 
