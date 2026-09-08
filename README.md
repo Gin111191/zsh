@@ -7,21 +7,24 @@ Based on [radleylewis/zsh](https://github.com/radleylewis/zsh), with my own cust
 
 | File | Purpose |
 |------|---------|
+| `.zprofile` | Login-time setup: Homebrew shellenv (Apple Silicon / Intel / Linuxbrew), then re-sources `~/.zprofile` |
 | `.zshenv` | Environment: XDG dirs, `EDITOR=nvim`, `MANPAGER` via bat, Starship config path, `~/.local/bin` in PATH |
 | `.zshrc` | History, shell options, completion, fzf keybindings loader, sources the modular files, portable conda init |
 | `aliases.zsh` | eza/bat/ripgrep aliases, git shortcuts, `lf` cd-on-exit wrapper, `v` → nvim |
 | `bindings.zsh` | Vi-mode cursor shapes + custom keybindings (registered via `zvm_after_init`) |
+| `clipboard.zsh` | Shared clipboard for vi-mode yank/paste — tmux paste-buffer as the single store |
 | `fzf.zsh` | fzf defaults (fd-backed, bat preview), `Ctrl+F` no-hidden file picker |
 | `plugins.zsh` | Tiny built-in plugin manager (git clone on first launch, `zplugin-update` to update) |
 | `prompt.zsh` | Prompt housekeeping (`VIRTUAL_ENV_DISABLE_PROMPT`) |
 | `starship.toml` | Starship prompt: directory, OS icon, git branch/status, conda env, node/rust/go/php |
+| `claude/CLAUDE.md` | Global rules for Claude Code — symlinked to `~/.claude/CLAUDE.md` (see below) |
 
 ## Stack
 
 - **Prompt:** [starship](https://starship.rs) (requires a [Nerd Font](https://www.nerdfonts.com))
 - **Plugins:** zsh-autosuggestions, zsh-history-substring-search, zsh-vi-mode, fast-syntax-highlighting — auto-installed into `plugins/` on first launch, no plugin manager needed
 - **Navigation:** zoxide, fzf, fd, lf
-- **CLI tools:** eza, bat, ripgrep, neovim
+- **CLI tools:** eza, bat, ripgrep, ast-grep, jq, yq, gh, neovim
 - **Extras:** conda auto-init (only if anaconda3/miniconda3 is installed), NVM-ready
 
 ## My changes vs upstream
@@ -38,25 +41,34 @@ Based on [radleylewis/zsh](https://github.com/radleylewis/zsh), with my own cust
 **Ubuntu / Debian / WSL**
 
 ```sh
-sudo apt install zsh neovim eza bat fd-find fzf ripgrep
+sudo apt install zsh neovim eza bat fd-find fzf ripgrep jq gh unzip wl-clipboard
 curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
 curl -sS https://starship.rs/install.sh | sh
 # Ubuntu names bat/fd differently — symlink them:
 mkdir -p ~/.local/bin
 ln -sf $(which batcat) ~/.local/bin/bat
 ln -sf $(which fdfind) ~/.local/bin/fd
+# yq v4 and ast-grep are not packaged — apt's `yq` is the unrelated python v3:
+curl -sL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+  -o ~/.local/bin/yq && chmod +x ~/.local/bin/yq
+curl -sL https://github.com/ast-grep/ast-grep/releases/latest/download/app-x86_64-unknown-linux-gnu.zip \
+  -o /tmp/ast-grep.zip && unzip -j -o /tmp/ast-grep.zip ast-grep -d ~/.local/bin
 ```
+
+> `wl-clipboard` is what makes yank/paste reach the system clipboard **outside** tmux.
+> On WSL it rides WSLg's Wayland clipboard, which syncs both ways with Windows.
+> Inside tmux it is not needed — `clipboard.zsh` uses the tmux buffer instead.
 
 **macOS**
 
 ```sh
-brew install zsh neovim eza bat fd fzf zoxide starship ripgrep
+brew install zsh neovim eza bat fd fzf zoxide starship ripgrep ast-grep jq yq gh
 ```
 
 **Arch**
 
 ```sh
-paru -S zsh neovim eza bat fd fzf zoxide starship ripgrep
+paru -S zsh neovim eza bat fd fzf zoxide starship ripgrep ast-grep jq yq wl-clipboard
 ```
 
 > **Windows:** use WSL and follow the Ubuntu instructions.
@@ -103,6 +115,20 @@ mkdir -p ~/.cache/zsh         # completion cache
 Open a new terminal — plugins install themselves on first launch.
 
 Machine-specific tweaks go in `~/.config/zsh/local.zsh` (gitignored, sourced automatically if present).
+
+### 5. Claude Code rules (optional)
+
+`claude/CLAUDE.md` holds the global rules Claude Code loads in every project — which CLI
+tools exist here, that the Bash tool never sees the aliases in `aliases.zsh`, and the
+per-machine gotchas. Symlink it so both machines stay in step:
+
+```sh
+mkdir -p ~/.claude
+ln -sf ~/.config/zsh/claude/CLAUDE.md ~/.claude/CLAUDE.md
+```
+
+It is one file with a section per machine, labelled by OS. Add a machine before trusting
+its section — the macOS one is still a stub.
 
 ## Keybindings
 
