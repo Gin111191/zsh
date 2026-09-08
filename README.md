@@ -145,6 +145,20 @@ its section — the macOS one is still a stub.
 
 ## Shared clipboard
 
+**Short answer: yank reaches everywhere; `p` is one-way in tmux.**
+
+| | Outside tmux | Inside tmux |
+|---|---|---|
+| What `p` reads | the system clipboard (`pbpaste` / `wl-paste` / `xclip`) | the tmux paste-buffer |
+| Yank in shell → `p` in another pane | n/a | ✓ |
+| Yank in shell → paste into a GUI app | ✓ | ✓ (over OSC 52) |
+| Copy in a browser → `p` in shell | ✓ | ✗ — use the terminal's own paste |
+
+Only the last row surprises people. Inside tmux `p` deliberately reads the tmux buffer,
+because that is the whole point — every pane pastes the same thing, even over SSH — so it
+cannot also read whatever you just copied in a browser. For that direction use the
+terminal's own right-click / `Ctrl+Shift+V`, which needs no config.
+
 zsh-vi-mode yanks into ZLE's `$CUTBUFFER`, a variable that lives **inside the zsh
 process**. Every tmux pane runs its own zsh, so each pane gets its own store and
 `p` pastes something different in each one.
@@ -182,8 +196,10 @@ _zvm_wsl_copy() {                      # measured on GIN-PC:
 ```
 
 `clip.exe` handles UTF-8 (Vietnamese diacritics included) and multi-line text correctly.
-Both writes live inside the `$TMUX` branch — outside tmux there is no shared store to pair
-them with, and `p` falls back to `$CUTBUFFER` like stock zsh.
+Both writes live inside the `$TMUX` branch. Outside tmux both `ZVM_CLIPBOARD_*_CMD`
+variables stay empty, which hands the job to the plugin's own `zvm_clipboard_detect` —
+`pbcopy`/`pbpaste` on macOS, `wl-copy`/`xclip`/`xsel` on Linux. That is why `p` works in
+*both* directions there: it is reading the real system clipboard, not a tmux buffer.
 
 `bindings.zsh` rebinds `p`/`P` to that shared store (the plugin normally reserves
 it for `gp`/`gP`, mirroring vim's `"+p`), with a fallback to `$CUTBUFFER` so an
@@ -207,9 +223,9 @@ from `_my_bindings` for the case where someone turns lazy keybindings off.
 a unix socket, so SSH adds no network round-trip. It is twice as fast as `pbpaste`
 (7.9 ms). Shell startup pays one ~4 ms probe for the `-w` flag (tmux ≥ 3.2).
 
-**Limits:** `yy` loses its trailing newline (`$( )` strips it). The Windows/host → shell
-direction does not go through `p`: inside tmux `p` reads the tmux buffer, not the host
-clipboard. Paste that direction with the terminal's own right-click / `Ctrl+Shift+V`, which
+**Limits:** `yy` loses its trailing newline (`$( )` strips it). Inside tmux the host →
+shell direction does not go through `p`, because `p` reads the tmux buffer rather than the
+host clipboard. Paste that direction with the terminal's own right-click / `Ctrl+Shift+V`, which
 needs no config. Needs `set -g set-clipboard on` in tmux, which
 [tmux-config](https://github.com/Gin111191/tmux-config) already sets.
 
