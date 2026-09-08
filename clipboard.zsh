@@ -32,6 +32,15 @@ if [[ -n $TMUX ]]; then
 fi
 
 # Ngoài tmux: để trống thì zvm_clipboard_detect tự dò pbcopy / wl-copy / xclip.
+#
+# WSL: bốn thứ plugin dò (pbcopy, wl-copy, xclip, xsel) mặc định KHÔNG có cái nào,
+# và nó đòi phải set được CẢ copy lẫn paste mới coi clipboard là dùng được — nên
+# ngoài tmux là mất hẳn. clip.exe tuy có sẵn nhưng plugin không dò tới. Cách gọn
+# nhất là cài wl-clipboard: WSLg đồng bộ hai chiều với clipboard Windows, plugin
+# tự nhận ra wl-copy/wl-paste, không cần thêm dòng config nào.
+#     sudo apt install wl-clipboard
+# Không chọn đường clip.exe + powershell Get-Clipboard: đo trên GIN-PC là 212ms
+# mỗi lần dán (tmux 5ms) — đủ chậm để thấy khựng ở từng phím p.
 
 # GIỚI HẠN ĐÃ BIẾT
 #   - `yy` mất ký tự xuống dòng cuối: $( ) của shell cắt trailing newline.
