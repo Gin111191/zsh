@@ -87,6 +87,11 @@ export ZDOTDIR="$HOME/.config/zsh"
 [[ -f "$ZDOTDIR/.zshenv" ]] && source "$ZDOTDIR/.zshenv"
 ```
 
+Either way, `~/.zprofile` and `~/.zshrc` in `$HOME` stop being read — zsh reads them from
+`$ZDOTDIR` instead. This repo's `.zprofile` sets up Homebrew (Apple Silicon, Intel or Linuxbrew,
+whichever it finds) and then sources `~/.zprofile` at the end, so anything an installer writes
+there (nvm, conda, rustup…) still runs instead of failing silently.
+
 ### 4. Finish
 
 ```sh

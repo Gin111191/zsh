@@ -10,3 +10,6 @@ local.zsh
 
 # macOS metadata
 .DS_Store
+
+# macOS zsh session data
+.zsh_sessions/
