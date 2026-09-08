@@ -31,4 +31,30 @@ _my_bindings() {
   # Up/Down -> history search by substring (^[[A/^[[B are up/down arrow escape codes)
   bindkey '^[[A' history-substring-search-up
   bindkey '^[[B' history-substring-search-down
+
+  # p/P -> dán từ kho DÙNG CHUNG (xem clipboard.zsh), không phải $CUTBUFFER riêng
+  # của tiến trình zsh này. Mặc định plugin để p/P đọc CUTBUFFER và chỉ gp/gP mới
+  # đọc clipboard — bắt chước vim ("+p). Ở đây đảo lại: p là phím dùng hằng ngày.
+  zvm_define_widget _zvm_put_shared_after
+  zvm_define_widget _zvm_put_shared_before
+  zvm_bindkey vicmd  'p' _zvm_put_shared_after
+  zvm_bindkey vicmd  'P' _zvm_put_shared_before
+  zvm_bindkey visual 'p' zvm_visual_paste_clipboard
 }
+
+# Dán kho chung, có đường lui. zvm_paste_clipboard_after của plugin `return`
+# ngay khi clipboard rỗng — bấm p thấy như phím chết. Bản này rơi về CUTBUFFER.
+_zvm_put_shared() {   # $1 = after | before
+  local content saved
+  content=$(zvm_clipboard_get)
+  if [[ -n $content ]]; then
+    saved=$CUTBUFFER
+    CUTBUFFER=$content
+    [[ $1 == after ]] && zvm_vi_put_after || zvm_vi_put_before
+    CUTBUFFER=$saved
+  else
+    [[ $1 == after ]] && zvm_vi_put_after || zvm_vi_put_before
+  fi
+}
+_zvm_put_shared_after()  { _zvm_put_shared after }
+_zvm_put_shared_before() { _zvm_put_shared before }

@@ -115,6 +115,45 @@ Machine-specific tweaks go in `~/.config/zsh/local.zsh` (gitignored, sourced aut
 | `↑` / `↓` | History substring search |
 | `Ctrl+\` | Toggle autosuggestions |
 | `Esc` | Vi normal mode (zsh-vi-mode) |
+| `y` then `p` | Yank / paste through the **shared** clipboard — see below |
+
+## Shared clipboard
+
+zsh-vi-mode yanks into ZLE's `$CUTBUFFER`, a variable that lives **inside the zsh
+process**. Every tmux pane runs its own zsh, so each pane gets its own store and
+`p` pastes something different in each one.
+
+`clipboard.zsh` fixes that by making **tmux's paste-buffer the single store**:
+
+```zsh
+ZVM_CLIPBOARD_COPY_CMD='tmux load-buffer -w -'   # -w also pushes it out over OSC 52
+ZVM_CLIPBOARD_PASTE_CMD='tmux save-buffer -'
+```
+
+One yank then reaches everywhere:
+
+| Yanked in | Pasted in | |
+|---|---|---|
+| zsh vi-mode, pane A | zsh vi-mode, pane B (`p`) | ✓ |
+| zsh vi-mode | any pane, `prefix + ]` | ✓ |
+| zsh vi-mode | a GUI app on the local machine (`Cmd+V`) | ✓ via OSC 52 |
+| tmux copy-mode (`y`) | zsh vi-mode (`p`) | ✓ |
+
+The tmux branch is **OS-independent** — macOS, Linux over SSH and WSL all use the
+same two lines. No `clip.exe`, no `xclip`, no OS detection.
+
+`bindings.zsh` rebinds `p`/`P` to that shared store (the plugin normally reserves
+it for `gp`/`gP`, mirroring vim's `"+p`), with a fallback to `$CUTBUFFER` so an
+empty clipboard never makes `p` look like a dead key.
+
+**Cost:** 3.8 ms per paste — `tmux save-buffer` talks to the local tmux server over
+a unix socket, so SSH adds no network round-trip. It is twice as fast as `pbpaste`
+(7.9 ms). Shell startup pays one ~4 ms probe for the `-w` flag (tmux ≥ 3.2).
+
+**Limits:** `yy` loses its trailing newline (`$( )` strips it). OSC 52 is
+write-only, so copying in a browser and pressing `p` in the shell will not work —
+use `Cmd+V` for that direction. Needs `set -g set-clipboard on` in tmux, which
+[tmux-config](https://github.com/Gin111191/tmux-config) already sets.
 
 ## Updating plugins
 

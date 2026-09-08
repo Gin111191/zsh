@@ -106,6 +106,10 @@ source "$ZDOTDIR/fzf.zsh"
 # Aliases
 source "$ZDOTDIR/aliases.zsh"
 
+# Clipboard dùng chung (phải đứng TRƯỚC plugins.zsh: zsh-vi-mode đọc các biến
+# ZVM_* lúc nạp, set sau là không có tác dụng)
+source "$ZDOTDIR/clipboard.zsh"
+
 # Custom keybindings
 source "$ZDOTDIR/bindings.zsh"
 
