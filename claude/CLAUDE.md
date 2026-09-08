@@ -17,7 +17,8 @@ Synced from `github.com/Gin111191/zsh` → `claude/CLAUDE.md`, symlinked to
   Use `rg -a` (or `grep -a`) whenever you need the actual lines out of that file.
 
 ## CLI tools — prefer these
-Installed on WSL; the macOS box installs the same stack via brew (README → Install).
+This is the stack README → Install puts on every machine. Present in practice, but
+`command -v` before leaning on any one of them — see *Any machine* below.
 - `rg` content search, `fd` file search. Both honour .gitignore; `-u` overrides that,
   `-uu` also includes hidden files.
 - `ast-grep` — structural search over the AST, for multi-line or syntax-shaped
@@ -28,8 +29,26 @@ Installed on WSL; the macOS box installs the same stack via brew (README → Ins
 - `gh` GitHub CLI (authenticated), `bat`, `eza`, `btop`, `nvim`, `tmux`.
 - `fzf`, `zoxide`: interactive-only, useless in a non-interactive Bash call.
 
-## Not installed — do not reach for these
+## Absent on every machine checked so far
 delta, sd, hyperfine, dust, duf, procs, tldr, watchexec, direnv, mise, cargo.
+Treat as absent, but this is an observation, not a guarantee — `command -v` settles it.
+`btop` is the other way round: it is in the list above yet missing on some machines.
+
+## Any machine — probe, never assume
+This file is cloned onto every machine, so nothing above is guaranteed by the OS name
+alone. Each check below is one cheap command; run it instead of guessing.
+
+| Question | Command | Why it matters |
+|---|---|---|
+| Is the tool here? | `command -v <tool>` | The tool list is what the README installs, not what this box has. |
+| Can I install it? | `sudo -n true` | Exit 0 = passwordless. Otherwise hand the user the command, do not run it. |
+| Which package manager? | `brew --prefix`, else `apt` / `paru` | See README → Install for the per-OS line. |
+| Does the terminal do OSC 52? | `$TERM_PROGRAM`, `$TERM` | WezTerm, iTerm2, kitty, Windows Terminal do; conhost does not, and fails silently. |
+| Am I inside tmux? | `[[ -n $TMUX ]]` | Decides which store `p` reads. README → Shared clipboard. |
+| How heavy is `$HOME`? | `du -h -d1 ~` | Cloud-sync folders and toolchain caches make a bare `~` search take minutes. Always scope to a project directory. |
+
+Anything verified on one specific box goes in a `## Machine: …` section below, so the
+generic rules stay true everywhere.
 
 ## Machine: WSL2, Ubuntu 26.04, hostname GIN-PC
 - Windows drives mount at `/mnt/c` and `/mnt/f`. I/O there is ~10x slower than the
@@ -47,6 +66,3 @@ delta, sd, hyperfine, dust, duf, procs, tldr, watchexec, direnv, mise, cargo.
   uptime, 2026-09-08). There is no working Wayland or X11 display — `wl-copy`, `wl-paste`,
   `xdpyinfo` and every Linux GUI app fail or hang; `wl-clipboard` is installed but inert.
   Do not propose anything that needs a display.
-
-## Machine: macOS
-- Not surveyed yet. Fill this in from that machine before relying on it.
