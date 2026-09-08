@@ -9,6 +9,12 @@ Synced from `github.com/Gin111191/zsh` → `claude/CLAUDE.md`, symlinked to
 - ZDOTDIR is `~/.config/zsh` (a git repo). There is no `~/.zshrc` in `$HOME`.
 - Never let a pager block: `git --no-pager …`, and `bat -pp` rather than bare `bat`.
 - Machine-local shell overrides belong in `~/.config/zsh/local.zsh` (gitignored).
+- `~/.config/zsh/plugins/zsh-vi-mode/zsh-vi-mode.zsh` holds a NUL byte, on EVERY machine
+  (it ships in the repo), so both searchers go into binary mode on it:
+  plain `grep` prints nothing and exits 1 — it reads as "pattern absent", which is a lie;
+  plain `rg` does match and `rg -c` counts correctly, but in place of the lines it prints
+  `binary file matches (found "\0" byte ...)`.
+  Use `rg -a` (or `grep -a`) whenever you need the actual lines out of that file.
 
 ## CLI tools — prefer these
 Installed on WSL; the macOS box installs the same stack via brew (README → Install).
@@ -32,8 +38,6 @@ delta, sd, hyperfine, dust, duf, procs, tldr, watchexec, direnv, mise, cargo.
   Scope searches to a project directory, never bare `~`.
 - `sudo` requires a password, so I cannot install packages. Hand the user the
   command instead of trying.
-- `plugins/zsh-vi-mode/zsh-vi-mode.zsh` contains a NUL byte: `grep` treats it as
-  binary and silently prints nothing. Use `rg` (or `grep -a`) on that file.
 - `lf` is not installed here, though `aliases.zsh` defines an `lf()` wrapper.
 - The terminal is **conhost**, the legacy Windows console — not Windows Terminal. It
   ignores OSC 52 silently, so anything relying on the terminal to set the host clipboard
