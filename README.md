@@ -21,7 +21,7 @@ Based on [radleylewis/zsh](https://github.com/radleylewis/zsh), with my own cust
 
 ## Stack
 
-- **Prompt:** [starship](https://starship.rs) (requires a [Nerd Font](https://www.nerdfonts.com))
+- **Prompt:** [starship](https://starship.rs) (needs a [Nerd Font](https://www.nerdfonts.com) — except on WezTerm, which bundles one; Install → *The font*)
 - **Plugins:** zsh-autosuggestions, zsh-history-substring-search, zsh-vi-mode, fast-syntax-highlighting — auto-installed into `plugins/` on first launch, no plugin manager needed
 - **Navigation:** zoxide, fzf, fd, lf
 - **CLI tools:** eza, bat, ripgrep, ast-grep, jq, yq, gh, neovim
@@ -56,7 +56,7 @@ That `eval` only fixes the terminal you are sitting in. Step 3 makes it permanen
 repo's `.zprofile` finds brew on its own, at `/opt/homebrew`, `/usr/local` or Linuxbrew.
 
 ```sh
-brew install neovim eza bat fd fzf zoxide starship ripgrep ast-grep jq yq gh tmux lf
+brew install neovim eza bat fd fzf zoxide starship ripgrep ast-grep jq yq gh tmux lf btop
 brew install --cask font-hack-nerd-font
 ```
 
@@ -68,7 +68,7 @@ only if you want a newer version — then see step 4.
 
 ```sh
 sudo apt update
-sudo apt install zsh neovim eza bat fd-find fzf ripgrep jq gh unzip tmux lf wl-clipboard
+sudo apt install zsh neovim eza bat fd-find fzf ripgrep jq gh unzip tmux lf btop wl-clipboard
 ```
 
 Five more are missing from apt, or are the wrong program under the right name:
@@ -100,16 +100,33 @@ step 3 onward this repo's `.zshenv` adds it; until then, run
 **Arch**
 
 ```sh
-paru -S zsh neovim eza bat fd fzf zoxide starship ripgrep ast-grep jq yq gh tmux lf wl-clipboard
+paru -S zsh neovim eza bat fd fzf zoxide starship ripgrep ast-grep jq yq gh tmux lf btop wl-clipboard
 ```
 
-**The font — every OS, and it is not a command**
+**The font**
 
 Starship draws the prompt with icons from a [Nerd Font](https://www.nerdfonts.com). Without
-one the prompt shows empty rectangles (tofu) and looks broken. Installing the font is not
-enough: you must also **select it in your terminal's settings** (Profile → Font → *Hack
-Nerd Font*). macOS gets the font from the `--cask` line above; on Linux download it from
-nerdfonts.com.
+one the prompt shows empty rectangles (tofu) and looks broken.
+
+**One exception: WezTerm needs nothing.** It bundles `Symbols Nerd Font Mono` and falls back
+to it automatically, so the icons render on a clean install. `wezterm ls-fonts` prints the
+chain it actually resolved. Every other terminal — Terminal.app, iTerm2, Windows Terminal,
+GNOME Terminal, Alacritty, kitty — needs the two steps below.
+
+macOS already has the font from the `--cask` line above. On Linux:
+
+```sh
+mkdir -p ~/.local/share/fonts
+curl -fLo /tmp/Hack.zip \
+  https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Hack.zip
+unzip -o /tmp/Hack.zip -d ~/.local/share/fonts/Hack
+fc-cache -f
+fc-list | grep -i "Hack Nerd Font" | head -3   # a line of output means it is registered
+```
+
+**Installing it is only half.** You then have to **select it in the terminal's own
+settings** — Profile → Font → *Hack Nerd Font*. No command does this for you, and skipping
+it is the usual reason the prompt still looks broken after installing the font.
 
 > **WSL:** install the font in **Windows**, not in Linux — Windows draws the terminal, so
 > that is where the font has to live. Then pick it in Windows Terminal's settings.
