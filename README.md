@@ -56,8 +56,9 @@ curl -sL https://github.com/ast-grep/ast-grep/releases/latest/download/app-x86_6
 ```
 
 > `wl-clipboard` is what makes yank/paste reach the system clipboard **outside** tmux.
-> On WSL it rides WSLg's Wayland clipboard, which syncs both ways with Windows.
 > Inside tmux it is not needed — `clipboard.zsh` uses the tmux buffer instead.
+> On WSL it needs a working WSLg compositor; see *Troubleshooting* if yank stops
+> reaching the system clipboard outside tmux.
 
 **macOS**
 
@@ -180,6 +181,39 @@ a unix socket, so SSH adds no network round-trip. It is twice as fast as `pbpast
 write-only, so copying in a browser and pressing `p` in the shell will not work —
 use `Cmd+V` for that direction. Needs `set -g set-clipboard on` in tmux, which
 [tmux-config](https://github.com/Gin111191/tmux-config) already sets.
+
+## Troubleshooting
+
+**Outside tmux on WSL, yank never reaches the Windows clipboard.**
+
+`zvm_clipboard_detect` only looks for `pbcopy`, `wl-copy`, `xclip` and `xsel`, and it needs
+*both* a copy and a paste command before it treats the clipboard as usable. `clip.exe` exists
+on WSL but the plugin never looks for it. So `wl-clipboard` is the fix — *provided WSLg's
+compositor is alive*.
+
+Check that first:
+
+```sh
+wl-copy </dev/null && echo ok        # "does not seem to implement seat" => weston is down
+rg -c 'signal 11' /mnt/wslg/stderr.log   # count of compositor crashes since boot
+```
+
+On GIN-PC (2026-09-08) weston was crash-looping with SIGSEGV every ~102 s — 259 times since
+boot — so wl-clipboard, XWayland and every Linux GUI app were all dead. `weston.log` showed the
+rdprail app-list scan retrying two icons that do not exist on disk, then dying:
+
+```
+retry_find_icon_file: icon (/usr/local/cuda-13.1/libnvvp/icon.xpm) retry count (4)
+free_app_entry(): (null): /usr/share/applications/openjdk-25-java.desktop
+```
+
+`nvvp.desktop` and `nsight.desktop` (CUDA 13.1) point at `icon.xpm` files that were never
+installed. Suggestive, not proven. Try `wsl --shutdown` from Windows first; if the loop comes
+back, move those two `.desktop` files aside and watch the crash count.
+
+Not worth routing around it with `clip.exe` + `powershell Get-Clipboard`: measured at 212 ms per
+paste against tmux's 5 ms, which is a visible stutter on every `p`. Inside tmux the shared
+clipboard works regardless — that path does not touch WSLg at all.
 
 ## Updating plugins
 

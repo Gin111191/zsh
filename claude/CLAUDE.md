@@ -35,6 +35,11 @@ delta, sd, hyperfine, dust, duf, procs, tldr, watchexec, direnv, mise, cargo.
 - `plugins/zsh-vi-mode/zsh-vi-mode.zsh` contains a NUL byte: `grep` treats it as
   binary and silently prints nothing. Use `rg` (or `grep -a`) on that file.
 - `lf` is not installed here, though `aliases.zsh` defines an `lf()` wrapper.
+- WSLg is broken: weston crash-loops with SIGSEGV every ~102 s (259 times since boot,
+  2026-09-08). So there is no working Wayland or X11 display — `wl-copy`, `wl-paste`,
+  `xdpyinfo` and any Linux GUI app all fail or hang. `wl-clipboard` is installed but
+  inert. Do not propose GUI or clipboard solutions that need a display; use tmux
+  buffers, and check `rg -c 'signal 11' /mnt/wslg/stderr.log` before assuming otherwise.
 
 ## Machine: macOS
 - Not surveyed yet. Fill this in from that machine before relying on it.
