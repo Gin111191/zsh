@@ -29,43 +29,27 @@ if [[ -n $TMUX ]]; then
     ZVM_CLIPBOARD_COPY_CMD='tmux load-buffer -'
   fi
   tmux delete-buffer -b _zvm_probe 2>/dev/null
+
+  # WSL: cờ -w chỉ bảo tmux PHÁT OSC 52 — terminal phải cài đặt nó mới có tác
+  # dụng. conhost (console cũ của Windows) thì không: đã bắn thẳng escape
+  # \033]52 vào tty của client, bỏ qua tmux, clipboard Windows vẫn không đổi.
+  # Phía tmux đã đúng hết (set-clipboard on, terminal-features xterm*:clipboard,
+  # capability Ms có mặt), lỗi nằm ở đầu nhận.
+  #
+  # Ghi song song hai nơi: tmux buffer lo `p` giữa các pane (5ms), clip.exe lo
+  # Ctrl+V trong app Windows (37ms). clip.exe nuốt đúng UTF-8 tiếng Việt có dấu
+  # và văn bản nhiều dòng.
+  if [[ -n $WSL_DISTRO_NAME ]] && (( $+commands[clip.exe] )); then
+    _zvm_wsl_copy() {
+      local buf=$(cat)
+      print -rn -- "$buf" | tmux load-buffer -w -
+      print -rn -- "$buf" | clip.exe
+    }
+    ZVM_CLIPBOARD_COPY_CMD='_zvm_wsl_copy'
+  fi
 fi
 
 # Ngoài tmux: để trống thì zvm_clipboard_detect tự dò pbcopy / wl-copy / xclip.
-
-# =========================================================
-# WSL: OSC 52 KHÔNG tới được clipboard Windows
-# =========================================================
-#
-# Cờ -w ở trên bảo tmux đẩy tiếp qua OSC 52 về clipboard của máy đang ngồi.
-# Trên GIN-PC điều đó im lặng không xảy ra: terminal là conhost (console cũ của
-# Windows, không phải Windows Terminal) và conhost không cài đặt OSC 52. Đã bắn
-# thẳng escape \033]52 vào tty của tmux client, bỏ qua tmux — clipboard Windows
-# vẫn không đổi. Phía tmux thì đã đúng hết (set-clipboard on, terminal-features
-# xterm*:clipboard, capability Ms có mặt), lỗi nằm ở đầu nhận.
-#
-# Vá bằng cách ghi SONG SONG hai nơi: tmux buffer vẫn lo `p` giữa các pane (5ms),
-# thêm clip.exe lo Ctrl+V trong app Windows (37ms). Đã thử clip.exe với UTF-8
-# tiếng Việt có dấu và văn bản nhiều dòng: đúng nguyên vẹn.
-#
-# (Đã thử wl-clipboard trước đó: vô dụng ở đây vì weston của WSLg crash-loop —
-#  xem README > Troubleshooting. Nhưng nó cũng không phải thứ cần: đường đồng bộ
-#  ra Windows không đi qua WSLg.)
-if [[ -n $WSL_DISTRO_NAME ]] && (( $+commands[clip.exe] )); then
-  _zvm_wsl_copy() {
-    local buf=$(cat)
-    [[ -n $TMUX ]] && print -rn -- "$buf" | tmux load-buffer -w - 2>/dev/null
-    print -rn -- "$buf" | clip.exe
-  }
-  ZVM_CLIPBOARD_COPY_CMD='_zvm_wsl_copy'
-
-  # Ngoài tmux không còn kho nhanh nào để đọc, mà plugin đòi có CẢ paste mới
-  # chịu chạy copy (zvm_clipboard_available cần cả hai biến). Đọc thẳng clipboard
-  # Windows: 212ms — chậm, nhưng chỉ rơi vào nhánh này khi không có tmux.
-  if [[ -z $TMUX ]]; then
-    ZVM_CLIPBOARD_PASTE_CMD='powershell.exe -NoProfile -Command Get-Clipboard 2>/dev/null | tr -d "\r"'
-  fi
-fi
 
 # GIỚI HẠN ĐÃ BIẾT
 #   - `yy` mất ký tự xuống dòng cuối: $( ) của shell cắt trailing newline.

@@ -55,10 +55,9 @@ curl -sL https://github.com/ast-grep/ast-grep/releases/latest/download/app-x86_6
   -o /tmp/ast-grep.zip && unzip -j -o /tmp/ast-grep.zip ast-grep -d ~/.local/bin
 ```
 
-> `wl-clipboard` is what makes yank/paste reach the system clipboard **outside** tmux.
-> Inside tmux it is not needed — `clipboard.zsh` uses the tmux buffer instead.
-> On WSL it needs a working WSLg compositor; see *Troubleshooting* if yank stops
-> reaching the system clipboard outside tmux.
+> `wl-clipboard` only matters **outside** tmux, where the plugin auto-detects
+> `wl-copy`/`wl-paste` on its own. Inside tmux `clipboard.zsh` uses the tmux buffer and
+> needs neither.
 
 **macOS**
 
@@ -183,9 +182,8 @@ _zvm_wsl_copy() {                      # measured on GIN-PC:
 ```
 
 `clip.exe` handles UTF-8 (Vietnamese diacritics included) and multi-line text correctly.
-Outside tmux there is no fast store left to read, and the plugin refuses to copy unless a
-paste command is set too, so that branch falls back to `powershell Get-Clipboard` — 212 ms,
-acceptable only because you are almost never outside tmux.
+Both writes live inside the `$TMUX` branch — outside tmux there is no shared store to pair
+them with, and `p` falls back to `$CUTBUFFER` like stock zsh.
 
 `bindings.zsh` rebinds `p`/`P` to that shared store (the plugin normally reserves
 it for `gp`/`gP`, mirroring vim's `"+p`), with a fallback to `$CUTBUFFER` so an
@@ -235,23 +233,6 @@ changing. `clipboard.zsh` routes around it with `clip.exe`, see *Shared clipboar
 
 Switching to Windows Terminal would make the OSC 52 path work and the `clip.exe` branch
 redundant — it is kept because it costs 37 ms and works on any Windows console.
-
-**wl-clipboard does nothing on this box.**
-
-Unrelated to the above, and not needed for it — the host-clipboard path never touches WSLg.
-Noted only so it is not investigated twice: WSLg's compositor is dead here. `weston`
-crash-loops with SIGSEGV every ~102 s (259 times in one day's uptime), so `wl-copy` reports
-*"compositor does not seem to implement seat"*, `wl-paste` gets *"Connection refused"* and
-`xdpyinfo` hangs. Linux GUI apps do not run either.
-
-```sh
-rg -c 'signal 11' /mnt/wslg/stderr.log   # crash count since boot
-```
-
-`weston.log` shows it dying right after the rdprail app-list scan retries two icons that are
-not on disk — `nvvp.desktop` and `nsight.desktop` (CUDA 13.1) point at `icon.xpm` files that
-were never installed. Suggestive, not proven. `wsl --shutdown` first; if the loop returns,
-move those two `.desktop` files aside and watch the count.
 
 ## Updating plugins
 
