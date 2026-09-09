@@ -140,6 +140,25 @@ git clone https://github.com/Gin111191/zsh ~/.config/zsh
 If `~/.config/zsh` already exists, move it aside first (`mv ~/.config/zsh ~/.config/zsh.old`)
 — git refuses to clone into a non-empty directory.
 
+**Then the other three.** This repo is the shell only. Neovim, tmux and WezTerm each live
+in their own repo, and a machine is not set up until all four are here. The two install
+scripts symlink the config into place and back up whatever was there before:
+
+```sh
+git clone https://github.com/Gin111191/nvim-config ~/.local/share/nvim-config
+~/.local/share/nvim-config/install.sh     # plugins, then Mason, then treesitter parsers
+
+git clone https://github.com/Gin111191/tmux-config ~/.local/share/tmux-config
+~/.local/share/tmux-config/install.sh
+
+git clone https://github.com/Gin111191/wezterm-config ~/.config/wezterm
+```
+
+> **nvim-config and tmux-config are a pair.** 24-bit colour is arranged across both of
+> them: tmux decides whether to tell Neovim the terminal has it, and Neovim carries the
+> 256-colour palette for when it does not. Take one without the other and the colours
+> break in a terminal like macOS Terminal.app.
+
 ### 3. Point zsh at the config
 
 **Recommended, no root needed.** Create `~/.zshenv` with exactly this:
