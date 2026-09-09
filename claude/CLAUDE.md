@@ -57,7 +57,6 @@ generic rules stay true everywhere.
   Scope searches to a project directory, never bare `~`.
 - `sudo` requires a password, so I cannot install packages. Hand the user the
   command instead of trying.
-- `lf` is not installed here, though `aliases.zsh` defines an `lf()` wrapper.
 - The terminal is **conhost**, the legacy Windows console — not Windows Terminal. It
   ignores OSC 52 silently, so anything relying on the terminal to set the host clipboard
   fails without an error. `clip.exe` (37 ms) is the working path to the Windows clipboard;
