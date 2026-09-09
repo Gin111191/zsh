@@ -1,28 +1,29 @@
 # =========================================================
-# Clipboard dùng chung — MỘT kho duy nhất cho mọi nơi
+# Shared clipboard — ONE store for everywhere
 # =========================================================
 #
-# VẤN ĐỀ: zsh-vi-mode yank vào $CUTBUFFER, mà đó là biến nằm TRONG tiến trình
-# zsh. Mỗi pane tmux là một zsh riêng => mỗi pane một kho, `p` ở hai pane ra
-# hai giá trị khác nhau.
+# THE PROBLEM: zsh-vi-mode yanks into $CUTBUFFER, and that is a variable living
+# INSIDE the zsh process. Every tmux pane is its own zsh => every pane its own
+# store, so `p` in two panes gives two different values.
 #
-# CÁCH GIẢI: lấy buffer của tmux làm kho duy nhất. Nó vốn dùng chung cho mọi
-# pane, và cờ -w bảo tmux đẩy tiếp qua OSC 52 về clipboard của máy đang ngồi.
-# Một lần yank nằm ở cả hai chỗ, kể cả khi đang SSH.
+# THE FIX: make tmux's buffer the single store. It is already shared across
+# every pane, and the -w flag tells tmux to push it on via OSC 52 to the
+# clipboard of the machine you are sitting at. One yank lands in both places,
+# even over SSH.
 #
-# Nhánh tmux KHÔNG phụ thuộc hệ điều hành: macOS, Linux qua SSH và WSL dùng
-# chung đúng đoạn này — không cần clip.exe, xclip hay dò OS.
+# The tmux branch does NOT depend on the operating system: macOS, Linux over SSH
+# and WSL all use exactly this code — no clip.exe, no xclip, no OS probing.
 #
-# Đo trên tmux 3.7: đọc 3.8ms/lần (nhanh gấp đôi pbpaste 7.9ms). tmux nói
-# chuyện qua unix socket NỘI MÁY nên SSH cũng không phát sinh vòng mạng.
+# Measured on tmux 3.7: 3.8ms per read (twice as fast as pbpaste at 7.9ms). tmux
+# talks over a LOCAL unix socket, so SSH adds no network round trip either.
 
 ZVM_SYSTEM_CLIPBOARD_ENABLED=true
 
 if [[ -n $TMUX ]]; then
   ZVM_CLIPBOARD_PASTE_CMD='tmux save-buffer -'
 
-  # Cờ -w chỉ có từ tmux 3.2. Dò một lần lúc mở shell thay vì so chuỗi phiên
-  # bản — mọi kiểu so chuỗi đều vỡ khi gặp 3.10.
+  # The -w flag only exists from tmux 3.2 on. Probe once at shell startup rather
+  # than comparing version strings — every kind of string compare breaks on 3.10.
   if printf '' | tmux load-buffer -w -b _zvm_probe - 2>/dev/null; then
     ZVM_CLIPBOARD_COPY_CMD='tmux load-buffer -w -'
   else
@@ -30,15 +31,16 @@ if [[ -n $TMUX ]]; then
   fi
   tmux delete-buffer -b _zvm_probe 2>/dev/null
 
-  # WSL: cờ -w chỉ bảo tmux PHÁT OSC 52 — terminal phải cài đặt nó mới có tác
-  # dụng. conhost (console cũ của Windows) thì không: đã bắn thẳng escape
-  # \033]52 vào tty của client, bỏ qua tmux, clipboard Windows vẫn không đổi.
-  # Phía tmux đã đúng hết (set-clipboard on, terminal-features xterm*:clipboard,
-  # capability Ms có mặt), lỗi nằm ở đầu nhận.
+  # WSL: the -w flag only tells tmux to EMIT OSC 52 — the terminal has to
+  # implement it for anything to happen. conhost (the legacy Windows console)
+  # does not: firing the escape \033]52 straight at the client's tty, bypassing
+  # tmux, still left the Windows clipboard unchanged. Everything on the tmux side
+  # is correct (set-clipboard on, terminal-features xterm*:clipboard, the Ms
+  # capability present) — the fault is at the receiving end.
   #
-  # Ghi song song hai nơi: tmux buffer lo `p` giữa các pane (5ms), clip.exe lo
-  # Ctrl+V trong app Windows (37ms). clip.exe nuốt đúng UTF-8 tiếng Việt có dấu
-  # và văn bản nhiều dòng.
+  # So write to both places at once: the tmux buffer handles `p` between panes
+  # (5ms), clip.exe handles Ctrl+V inside Windows apps (37ms). clip.exe swallows
+  # accented Vietnamese UTF-8 and multi-line text correctly.
   if [[ -n $WSL_DISTRO_NAME ]] && (( $+commands[clip.exe] )); then
     _zvm_wsl_copy() {
       local buf=$(cat)
@@ -49,14 +51,16 @@ if [[ -n $TMUX ]]; then
   fi
 fi
 
-# Ngoài tmux: để trống thì zvm_clipboard_detect tự dò pbcopy / wl-copy / xclip.
+# Outside tmux: leave these empty and zvm_clipboard_detect finds pbcopy /
+# wl-copy / xclip by itself.
 
-# GIỚI HẠN ĐÃ BIẾT
-#   - `yy` mất ký tự xuống dòng cuối: $( ) của shell cắt trailing newline.
-#     Trên dòng lệnh thì thường là điều mình muốn.
-#   - Chiều Windows -> shell KHÔNG đi qua `p`. Trong tmux, `p` đọc tmux buffer
-#     chứ không đọc clipboard Windows. Copy từ trình duyệt rồi dán vào shell thì
-#     dùng chuột phải / Ctrl+Shift+V của terminal (đã chạy sẵn, không cần config).
-#     Không bắt `p` đọc clipboard Windows vì powershell Get-Clipboard mất 212ms.
-#   - Cần `set -g set-clipboard on` bên tmux thì OSC 52 mới đi được.
-#     tmux-config (github.com/Gin111191/tmux-config) đã bật sẵn.
+# KNOWN LIMITS
+#   - `yy` loses the trailing newline: the shell's $( ) strips it. On a command
+#     line that is usually what you want anyway.
+#   - The Windows -> shell direction does NOT go through `p`. Inside tmux, `p`
+#     reads the tmux buffer, not the Windows clipboard. To paste something copied
+#     from a browser into the shell, use the terminal's own right-click /
+#     Ctrl+Shift+V (works already, needs no config). `p` is deliberately not
+#     wired to the Windows clipboard because powershell Get-Clipboard costs 212ms.
+#   - tmux needs `set -g set-clipboard on` for OSC 52 to get out at all.
+#     tmux-config (github.com/Gin111191/tmux-config) already turns it on.

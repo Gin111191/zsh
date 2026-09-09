@@ -32,30 +32,36 @@ _my_bindings() {
   bindkey '^[[A' history-substring-search-up
   bindkey '^[[B' history-substring-search-down
 
-  # p/P -> dán từ kho DÙNG CHUNG (xem clipboard.zsh), không phải $CUTBUFFER riêng
-  # của tiến trình zsh này. Mặc định plugin để p/P đọc CUTBUFFER và chỉ gp/gP mới
-  # đọc clipboard — bắt chước vim ("+p). Ở đây đảo lại: p là phím dùng hằng ngày.
-  # p/P nằm ở keymap vicmd nên phải gán muộn hơn, xem _my_vicmd_bindings.
+  # p/P -> paste from the SHARED store (see clipboard.zsh), not this zsh process's
+  # own $CUTBUFFER. By default the plugin has p/P read CUTBUFFER and only gp/gP
+  # read the clipboard — copying vim ("+p). Here it is the other way round: p is
+  # the key used every day.
+  # p/P live in the vicmd keymap, so they must be bound later — see
+  # _my_vicmd_bindings.
   _my_vicmd_bindings
 }
 
-# Gán p/P cho keymap vicmd.
+# Bind p/P in the vicmd keymap.
 #
-# Hai cái bẫy chồng nhau, cái nào cũng làm binding im lặng biến mất:
+# Two traps sit on top of each other, and either one makes the binding vanish
+# without a word:
 #
-#  1. zvm_bindkey KHÔNG dùng được ở đây. Khi lazy keybindings còn bật (mặc định
-#     true), nó chỉ xếp mọi keymap != viins vào ZVM_LAZY_KEYBINDINGS_LIST rồi
-#     return. Danh sách đó xử lý xong trước khi zvm_after_init chạy, nên p/P
-#     không bao giờ được gán. (^F ở trên vẫn chạy vì nó gắn vào viins.)
+#  1. zvm_bindkey CANNOT be used here. While lazy keybindings are on (the
+#     default), it just files every keymap other than viins into
+#     ZVM_LAZY_KEYBINDINGS_LIST and returns. That list is processed before
+#     zvm_after_init runs, so p/P never get bound at all. (^F above still works
+#     because it attaches to viins.)
 #
-#  2. Nhưng bindkey thường trong zvm_after_init cũng chưa đủ: lần ĐẦU bấm Esc,
-#     zvm mới áp dụng danh sách lazy bằng `eval "zvm_bindkey ..."` cho cả keymap
-#     vicmd — đè mất binding vừa gán. Kiểm tra bằng bindkey ngay sau khi mở shell
-#     thì thấy đúng, bấm Esc một cái là về lại vi-put-after.
+#  2. But a plain bindkey inside zvm_after_init is not enough either: the FIRST
+#     time you press Esc, zvm applies the lazy list with `eval "zvm_bindkey ..."`
+#     for the vicmd keymap too — overwriting the binding just made. Check with
+#     bindkey right after opening a shell and it looks right; press Esc once and
+#     it is back to vi-put-after.
 #
-# Nên phải gán lại trong hook after_lazy_keybindings, là chỗ zvm chạy NGAY SAU
-# khi áp dụng xong danh sách lazy. Vẫn gọi trong _my_bindings để phòng trường hợp
-# ai đó tắt ZVM_LAZY_KEYBINDINGS — khi ấy hook này không bao giờ chạy.
+# So it has to be bound again in the after_lazy_keybindings hook, which is where
+# zvm runs RIGHT AFTER finishing with the lazy list. Still called from
+# _my_bindings as well, in case someone turns ZVM_LAZY_KEYBINDINGS off — then
+# this hook never runs.
 _my_vicmd_bindings() {
   zvm_define_widget _zvm_put_shared_after
   zvm_define_widget _zvm_put_shared_before
@@ -68,8 +74,9 @@ zvm_after_lazy_keybindings() {
   _my_vicmd_bindings
 }
 
-# Dán kho chung, có đường lui. zvm_paste_clipboard_after của plugin `return`
-# ngay khi clipboard rỗng — bấm p thấy như phím chết. Bản này rơi về CUTBUFFER.
+# Paste from the shared store, with a fallback. The plugin's
+# zvm_paste_clipboard_after just `return`s when the clipboard is empty — pressing
+# p then feels like a dead key. This version falls back to CUTBUFFER.
 _zvm_put_shared() {   # $1 = after | before
   local content saved
   content=$(zvm_clipboard_get)
