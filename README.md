@@ -292,6 +292,18 @@ ln -sf ~/.config/zsh/claude/CLAUDE.md ~/.claude/CLAUDE.md
 It opens with rules that hold anywhere plus the one-command checks to probe a new box, then
 a `## Machine: …` section per machine for what was actually verified there.
 
+`claude/skills/` holds the slash-commands Claude Code loads — `/checkpoint` and `/resume` (how
+work gets written down and picked back up), `/open-case` and `/close-case`, `/grilling`,
+`/meta-ops`, `/zalo-send`, `/caffeinate`. Symlink the whole folder, so a new skill on one
+machine appears on every machine at the next pull:
+
+```sh
+mkdir -p ~/.claude
+ln -sfn ~/.config/zsh/claude/skills ~/.claude/skills
+```
+
+`-n` matters: without it a second run nests the link inside the folder it already points at.
+
 ## Keybindings
 
 | Key | Action |

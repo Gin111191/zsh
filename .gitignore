@@ -13,3 +13,6 @@ local.zsh
 
 # macOS zsh session data
 .zsh_sessions/
+
+# runtime state, not config
+claude/skills/caffeinate/schedule.pid
