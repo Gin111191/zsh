@@ -16,12 +16,14 @@ Based on [radleylewis/zsh](https://github.com/radleylewis/zsh), with my own cust
 | `fzf.zsh` | fzf defaults (fd-backed, bat preview), `Ctrl+F` no-hidden file picker |
 | `plugins.zsh` | Tiny built-in plugin manager (git clone on first launch, `zplugin-update` to update) |
 | `prompt.zsh` | Prompt housekeeping (`VIRTUAL_ENV_DISABLE_PROMPT`) |
-| `starship.toml` | Starship prompt: directory, OS icon, git branch/status, conda env, node/rust/go/php |
+| `starship.toml` | Starship prompt: a Dusk-Navy powerline bar — OS icon, user, directory, git branch/status, runtime versions, conda env, clock |
+| `starship-contrast.py` | Checks every prompt colour pair against WCAG AA — run it after editing the palette |
 | `claude/CLAUDE.md` | Global rules for Claude Code — symlinked to `~/.claude/CLAUDE.md` (see below) |
 
 ## Stack
 
 - **Prompt:** [starship](https://starship.rs) (needs a [Nerd Font](https://www.nerdfonts.com) — except on WezTerm, which bundles one; Install → *The font*)
+- **Colours:** **Dusk-Navy**, shared verbatim with WezTerm, tmux and Neovim — see *The palette* below
 - **Plugins:** zsh-autosuggestions, zsh-history-substring-search, zsh-vi-mode, fast-syntax-highlighting — auto-installed into `plugins/` on first launch, no plugin manager needed
 - **Navigation:** zoxide, fzf, fd, lf
 - **CLI tools:** eza, bat, ripgrep, ast-grep, jq, yq, gh, neovim
@@ -31,8 +33,37 @@ Based on [radleylewis/zsh](https://github.com/radleylewis/zsh), with my own cust
 
 - `alias v='nvim'` instead of `alias vim='nvim'`
 - Starship is initialized inside `zvm_after_init` (together with fast-syntax-highlighting) so the prompt and highlighting survive zsh-vi-mode's keybinding reset
-- Starship prompt shows the active **conda** environment (base env hidden)
+- Starship prompt shows the active **conda** environment, `base` included — which needs `changeps1` off, see Install → *conda*
 - Portable conda initialization block (works on any machine, skipped if conda isn't installed)
+
+## The palette
+
+The prompt is painted in **Dusk-Navy**, and so are WezTerm, tmux and Neovim. The
+canonical values live in ONE place — `CUSTOM_SCHEMES["Dusk-Navy"]` in
+[wezterm-config](https://github.com/Gin111191/wezterm-config)'s `wezterm.lua`. Everything
+else copies from it:
+
+| Where | What it takes |
+|-------|---------------|
+| [nvim-config](https://github.com/Gin111191/nvim-config) | the 16 colours as base16 slots, in `lua/plugins/colortheme.lua` |
+| [tmux-config](https://github.com/Gin111191/tmux-config) | six of those base16 slots, as the `%hidden thm_*` lines |
+| `starship.toml` here | the same colours as `[palettes.dusk_navy]` |
+
+Change a colour in `wezterm.lua` and the other three have to be changed to match, or they
+drift apart. There is no script that syncs them — the copies are deliberate, because each
+program wants a different subset.
+
+Every prompt colour pair that carries text clears WCAG AA (4.5:1). After editing
+`[palettes.dusk_navy]`, prove it still does:
+
+```sh
+~/.config/zsh/starship-contrast.py    # exits 1 and names the offender if a pair fails
+```
+
+The starship preset this began as (`gruvbox-rainbow`) failed that check on almost every
+segment — the directory, the thing you read most, sat at 2.09:1. Light text on mid-tone
+backgrounds is the trap. Dusk-Navy's *bright* row as the segment background with the dark
+background colour as the text avoids it, and is what tmux already does for its own chips.
 
 ## Install
 
@@ -214,6 +245,23 @@ which takes a few seconds and prints git output once — that is expected, not a
 
 Machine-specific tweaks go in `~/.config/zsh/local.zsh` (gitignored, sourced automatically if present).
 
+**conda** — only if you use it. Two things are NOT in this repo and have to be done per machine:
+
+```sh
+conda config --set changeps1 false
+```
+
+Without it conda prepends its own `(base) ` to `PS1`, which draws *outside* the starship
+bar instead of in it — you get the environment twice, in two different places. The setting
+lands in `~/.condarc`, which no repo here tracks.
+
+Second, conda's own installer ends by running `conda init`, and that **edits `.zshrc`**: it
+appends a block hardcoding the one path it was installed to, and comments out the portable
+loop this repo ships. Undo it — `git diff .zshrc` in `~/.config/zsh` shows exactly what it
+changed, and `git checkout .zshrc` puts it back. The loop already covers `anaconda3` and
+`miniconda3` under both `$HOME` and `/opt`, on any machine, and does nothing when conda is
+absent. That is the whole reason it exists.
+
 ### 5. Check it worked
 
 ```sh
@@ -222,6 +270,8 @@ command -v starship eza rg fd tmux   # -> five paths, no blanks
 ```
 
 - Prompt shows icons rather than boxes → the Nerd Font is selected.
+- A `(base)` sits ABOVE the prompt bar rather than inside it → conda is still writing
+  its own `PS1`: `conda config --set changeps1 false` (Install → *conda*).
 - `Esc` then `p` pastes → vi-mode and the shared clipboard are live.
 - Something errors on startup: `zsh -x -i -c exit 2>&1 | tail -40` prints the last lines
   zsh ran before it broke.
