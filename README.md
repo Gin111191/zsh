@@ -308,7 +308,7 @@ ln -sfn ~/.config/zsh/claude/skills ~/.claude/skills
 
 | Key | Action |
 |-----|--------|
-| `Ctrl+R` | Fuzzy history search (fzf) |
+| `Ctrl+R` | History search — fzf in Normal mode (`Esc` first), zsh's plain search in Insert mode |
 | `Ctrl+T` | Fuzzy file search incl. hidden files (fzf + fd) |
 | `Ctrl+F` | Fuzzy file search excl. hidden files |
 | `Ctrl+→` / `Ctrl+←` | Move forward / backward one word |
@@ -316,6 +316,8 @@ ln -sfn ~/.config/zsh/claude/skills ~/.claude/skills
 | `Ctrl+\` | Toggle autosuggestions |
 | `Esc` | Vi normal mode (zsh-vi-mode) |
 | `y` then `p` | Yank / paste through the **shared** clipboard — see below |
+
+Every key, alias and search command in one place: [CHEATSHEET.md](./CHEATSHEET.md).
 
 ## Shared clipboard
 
