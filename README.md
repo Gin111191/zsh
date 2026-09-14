@@ -309,8 +309,8 @@ ln -sfn ~/.config/zsh/claude/skills ~/.claude/skills
 | Key | Action |
 |-----|--------|
 | `Ctrl+R` | Fuzzy history search (fzf) |
-| `Ctrl+T` | Fuzzy file search incl. hidden and gitignored files (fzf + fd; skips `.git`, `node_modules`, `.venv`) |
-| `Ctrl+F` | Same, but excl. hidden files |
+| `Ctrl+T` | Fuzzy file search incl. hidden files (fzf + fd) |
+| `Ctrl+F` | Fuzzy file search excl. hidden files |
 | `Ctrl+→` / `Ctrl+←` | Move forward / backward one word |
 | `↑` / `↓` | History substring search |
 | `Ctrl+\` | Toggle autosuggestions |
