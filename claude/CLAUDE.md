@@ -51,7 +51,7 @@ Anything verified on one specific box goes in a `## Machine: …` section below,
 generic rules stay true everywhere.
 
 ## Machine: WSL2, Ubuntu 26.04, hostname GIN-PC
-- Windows drives mount at `/mnt/c` and `/mnt/f`. I/O there is ~10x slower than the
+- Windows drives mount at `/mnt/c`, `/mnt/d` and `/mnt/f`. I/O there is ~10x slower than the
   Linux side — never search `/mnt/*` unless asked explicitly.
 - `$HOME` holds ~266k files (`anaconda3`, `Everything_in_Gin` ≈ 16 GB together).
   Scope searches to a project directory, never bare `~`.
@@ -61,7 +61,30 @@ generic rules stay true everywhere.
   ignores OSC 52 silently, so anything relying on the terminal to set the host clipboard
   fails without an error. `clip.exe` (37 ms) is the working path to the Windows clipboard;
   `powershell.exe -NoProfile -Command Get-Clipboard` (212 ms) reads it back.
-- WSLg is broken: weston crash-loops with SIGSEGV every ~102 s (259 times in one day's
-  uptime, 2026-09-08). There is no working Wayland or X11 display — `wl-copy`, `wl-paste`,
-  `xdpyinfo` and every Linux GUI app fail or hang; `wl-clipboard` is installed but inert.
-  Do not propose anything that needs a display.
+- **I get here over SSH**, not through `wsl.exe`: `sshd -D` → `sshd-session` → `zsh` →
+  `claude` (check with `ps -o args= -p $PPID` up the tree). The distro is started at boot
+  by a scheduled task and is only ever reached by ssh, so no session in it inherits WSL's
+  interop environment. `WSL_DISTRO_NAME`, `WSL_INTEROP`, `DISPLAY`, `WAYLAND_DISPLAY` are
+  all unset, and `PATH` is whatever pam_env read out of `/etc/environment` — the Windows
+  entries interop appends (19 of them, `wsl.exe -e sh -c 'echo $PATH'` shows them) never
+  reach the shell. Consequences: `clip.exe` is NOT on PATH by default (`.zshenv` puts
+  `/mnt/c/Windows/System32` back), and any "am I on WSL?" test written against
+  `$WSL_DISTRO_NAME` is false on the one machine it was written for — probe the binary.
+  Interop itself still works: `/init` falls back to `/run/WSL/1_interop`, so `.exe` files
+  run fine, they just land in Windows **session 0**.
+- WSLg cannot work here, and it is the autostart that decides that, not a bug in WSL.
+  The instance is created at boot by a `schtasks` task (`wsl.exe -d Ubuntu -u root -e
+  sleep infinity`, see github.com/Gin111191/wsl-autostart) and afterwards only ever
+  reached by ssh, so no interactive Windows desktop session is ever bound to it: every
+  interop socket in `/run/WSL/` dates from boot and lands in session 0, while the desktop
+  is session 1 (`query.exe session`). `msrdc.exe`, the Windows half of WSLg, therefore
+  starts with nothing to draw on, drops the RDP peer after **101.7 s**, and weston's
+  `rdp-backend.so` NULL-derefs on the disconnect path (`segfault at 218`, see
+  `/mnt/wslg/stderr.log` and `dmesg | grep weston`). WSLGd restarts it, forever: ~850
+  SIGSEGVs and ~13 MB of `/mnt/wslg/weston.log` per day. Xwayland loses its compositor in
+  the same cycle (`(EE) could not connect to wayland server`), which is why `xdpyinfo`
+  hangs rather than fails. Updating WSL does not help (2.7.14.0 / WSLg 1.0.73.2 still
+  loops); the only real choices are `guiApplications=false` in `%USERPROFILE%\.wslconfig`
+  to stop the loop, or giving up pre-login ssh and creating the instance from a logged-in
+  desktop. So: no Wayland, no X11, `wl-copy`/`wl-paste`/`xdpyinfo` and every Linux GUI app
+  hang, `wl-clipboard` is inert. Do not propose anything that needs a display.
