@@ -108,8 +108,8 @@ zsh-autosuggestions proposes the rest of the line from your history.
 
 | Key | What it does |
 |---|---|
-| **`Ctrl+T`** | **Pick files** below the current folder; `Enter` pastes the path onto the command line |
-| `Ctrl+F` | The same, without hidden files |
+| **`Ctrl+T`** | **Pick a file** below the current folder — files only, no hidden files; `Enter` pastes the path onto the command line |
+| `Ctrl+F` | The same, but **files and folders**, hidden included |
 | `Alt+C` | Pick a folder below this one and `cd` into it |
 | `v **` then `Tab` | Open the file picker in the middle of any command — here, to open in Neovim |
 | `cd **` then `Tab` | The same, listing folders (also after `pushd` and `rmdir`) |
@@ -118,8 +118,9 @@ What `Ctrl+T` and `Ctrl+F` leave out: anything `.gitignore` excludes — `.env`,
 build output, usually. That is deliberate. Reach those with `fd -u` or `rg -uu`, below — or `cd` into
 the folder first (`cd node_modules`, then `Ctrl+T`), since a `.gitignore` above no longer hides it.
 
-⚠️ `Ctrl+T` **does** list the files inside `.git/` — fd only skips what `.gitignore` names, and
-`.gitignore` never names `.git`. Type `!.git/` to filter them out.
+⚠️ `Ctrl+F` **does** list what is inside `.git/` — it includes hidden files, and fd only skips what
+`.gitignore` names (never `.git` itself). `Ctrl+T` skips `.git/` on its own, being hidden. Type
+`!.git/` to filter it out of `Ctrl+F`.
 
 They search the folder the shell is in. From `~` that is close to a million files — `cd` into the
 project first.

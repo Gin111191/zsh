@@ -13,7 +13,7 @@ Based on [radleylewis/zsh](https://github.com/radleylewis/zsh), with my own cust
 | `aliases.zsh` | eza/bat/ripgrep aliases, git shortcuts, `lf` cd-on-exit wrapper, `v` → nvim |
 | `bindings.zsh` | Vi-mode cursor shapes + custom keybindings (registered via `zvm_after_init`) |
 | `clipboard.zsh` | Shared clipboard for vi-mode yank/paste — tmux paste-buffer as the single store |
-| `fzf.zsh` | fzf defaults (fd-backed, bat preview), `Ctrl+F` no-hidden file picker |
+| `fzf.zsh` | fzf defaults (fd-backed, bat preview), `Ctrl+F` file/folder picker with hidden files |
 | `plugins.zsh` | Tiny built-in plugin manager (git clone on first launch, `zplugin-update` to update) |
 | `prompt.zsh` | Prompt housekeeping (`VIRTUAL_ENV_DISABLE_PROMPT`) |
 | `starship.toml` | Starship prompt: a Dusk-Navy powerline bar — OS icon, user, directory, git branch/status, runtime versions, conda env, clock |
@@ -309,8 +309,8 @@ ln -sfn ~/.config/zsh/claude/skills ~/.claude/skills
 | Key | Action |
 |-----|--------|
 | `Ctrl+R` | History search — fzf in Normal mode (`Esc` first), zsh's plain search in Insert mode |
-| `Ctrl+T` | Fuzzy file search incl. hidden files (fzf + fd) |
-| `Ctrl+F` | Fuzzy file search excl. hidden files |
+| `Ctrl+T` | Fuzzy file search, files only, excl. hidden files (fzf + fd) |
+| `Ctrl+F` | Fuzzy file/folder search, incl. hidden files |
 | `Ctrl+→` / `Ctrl+←` | Move forward / backward one word |
 | `↑` / `↓` | History substring search |
 | `Ctrl+\` | Toggle autosuggestions |
