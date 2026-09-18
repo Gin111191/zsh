@@ -108,8 +108,8 @@ zsh-autosuggestions proposes the rest of the line from your history.
 
 | Key | What it does |
 |---|---|
-| **`Ctrl+T`** | **Pick a file** below the current folder — files only, no hidden files; `Enter` pastes the path onto the command line |
-| `Ctrl+F` | The same, but **files and folders**, hidden included |
+| **`Ctrl+T`** | **Pick a file or folder** below the current folder, no hidden ones; `Enter` pastes the path onto the command line |
+| `Ctrl+F` | The same, but **hidden files and folders included** |
 | `Alt+C` | Pick a folder below this one and `cd` into it |
 | `v **` then `Tab` | Open the file picker in the middle of any command — here, to open in Neovim |
 | `cd **` then `Tab` | The same, listing folders (also after `pushd` and `rmdir`) |
