@@ -51,7 +51,7 @@ Anything verified on one specific box goes in a `## Machine: …` section below,
 generic rules stay true everywhere.
 
 ## Machine: WSL2, Ubuntu 26.04, hostname GIN-PC
-- Windows drives mount at `/mnt/c` and `/mnt/f`. I/O there is ~10x slower than the
+- Windows drives mount at `/mnt/c`, `/mnt/d` and `/mnt/f`. I/O there is ~10x slower than the
   Linux side — never search `/mnt/*` unless asked explicitly.
 - `$HOME` holds ~266k files (`anaconda3`, `Everything_in_Gin` ≈ 16 GB together).
   Scope searches to a project directory, never bare `~`.
@@ -61,7 +61,23 @@ generic rules stay true everywhere.
   ignores OSC 52 silently, so anything relying on the terminal to set the host clipboard
   fails without an error. `clip.exe` (37 ms) is the working path to the Windows clipboard;
   `powershell.exe -NoProfile -Command Get-Clipboard` (212 ms) reads it back.
-- WSLg is broken: weston crash-loops with SIGSEGV every ~102 s (259 times in one day's
-  uptime, 2026-09-08). There is no working Wayland or X11 display — `wl-copy`, `wl-paste`,
-  `xdpyinfo` and every Linux GUI app fail or hang; `wl-clipboard` is installed but inert.
-  Do not propose anything that needs a display.
+- The login session arrives **stripped**: `PATH` is replaced by the fixed one in
+  `/etc/environment`, and `WSL_DISTRO_NAME`, `WSL_INTEROP`, `DISPLAY`, `WAYLAND_DISPLAY`
+  are simply gone. Interop does append the Windows PATH (19 entries — `wsl.exe -e sh -c
+  'echo $PATH'` proves it), the session just never keeps it. So `clip.exe` is NOT on PATH
+  by default, and any "am I on WSL?" test written against `$WSL_DISTRO_NAME` is false on
+  this box. `.zshenv` puts `/mnt/c/Windows/System32` back; probe binaries, never that var.
+- WSLg is broken, and the cause is the autostart, not WSL: weston segfaults every
+  **101.7 s** (`rdp-backend.so`, NULL deref at `+0x218`, `/mnt/wslg/stderr.log` +
+  `dmesg`) because `msrdc.exe` — the Windows half of WSLg — drops the RDP peer, and it
+  drops it because it lives in **session 0** while the desktop is session 1. The VM is
+  created by a `schtasks` **At system start up** task (`wsl.exe -d Ubuntu -u root -e
+  sleep infinity`, see github.com/Gin111191/wsl-autostart), so WSLg binds to the session
+  that made it: a boot session with no desktop. WSLGd then restarts weston forever
+  (~850 times a day). Updating WSL does not fix it (2.7.14.0 / WSLg 1.0.73.2 still
+  loops). Untested candidate fix: `wsl --shutdown`, then create the instance from a
+  logged-in terminal instead of the boot task — which costs pre-login SSH. Not yet
+  tried, because the shutdown kills the session doing the trying.
+  Until then there is no Wayland or X11 display — `wl-copy`, `wl-paste`, `xdpyinfo` and
+  every Linux GUI app hang; `wl-clipboard` is installed but inert. `DISPLAY` is unset
+  anyway (see above). Do not propose anything that needs a display.

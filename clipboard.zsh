@@ -41,7 +41,10 @@ if [[ -n $TMUX ]]; then
   # So write to both places at once: the tmux buffer handles `p` between panes
   # (5ms), clip.exe handles Ctrl+V inside Windows apps (37ms). clip.exe swallows
   # accented Vietnamese UTF-8 and multi-line text correctly.
-  if [[ -n $WSL_DISTRO_NAME ]] && (( $+commands[clip.exe] )); then
+  # Probe clip.exe itself, not $WSL_DISTRO_NAME — the login session arrives with
+  # that variable already stripped (see .zshenv), so the old check was dead on
+  # exactly the machine it was written for.
+  if (( $+commands[clip.exe] )); then
     _zvm_wsl_copy() {
       local buf=$(cat)
       print -rn -- "$buf" | tmux load-buffer -w -
