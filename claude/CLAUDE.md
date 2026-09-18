@@ -61,23 +61,30 @@ generic rules stay true everywhere.
   ignores OSC 52 silently, so anything relying on the terminal to set the host clipboard
   fails without an error. `clip.exe` (37 ms) is the working path to the Windows clipboard;
   `powershell.exe -NoProfile -Command Get-Clipboard` (212 ms) reads it back.
-- The login session arrives **stripped**: `PATH` is replaced by the fixed one in
-  `/etc/environment`, and `WSL_DISTRO_NAME`, `WSL_INTEROP`, `DISPLAY`, `WAYLAND_DISPLAY`
-  are simply gone. Interop does append the Windows PATH (19 entries — `wsl.exe -e sh -c
-  'echo $PATH'` proves it), the session just never keeps it. So `clip.exe` is NOT on PATH
-  by default, and any "am I on WSL?" test written against `$WSL_DISTRO_NAME` is false on
-  this box. `.zshenv` puts `/mnt/c/Windows/System32` back; probe binaries, never that var.
-- WSLg is broken, and the cause is the autostart, not WSL: weston segfaults every
-  **101.7 s** (`rdp-backend.so`, NULL deref at `+0x218`, `/mnt/wslg/stderr.log` +
-  `dmesg`) because `msrdc.exe` — the Windows half of WSLg — drops the RDP peer, and it
-  drops it because it lives in **session 0** while the desktop is session 1. The VM is
-  created by a `schtasks` **At system start up** task (`wsl.exe -d Ubuntu -u root -e
-  sleep infinity`, see github.com/Gin111191/wsl-autostart), so WSLg binds to the session
-  that made it: a boot session with no desktop. WSLGd then restarts weston forever
-  (~850 times a day). Updating WSL does not fix it (2.7.14.0 / WSLg 1.0.73.2 still
-  loops). Untested candidate fix: `wsl --shutdown`, then create the instance from a
-  logged-in terminal instead of the boot task — which costs pre-login SSH. Not yet
-  tried, because the shutdown kills the session doing the trying.
-  Until then there is no Wayland or X11 display — `wl-copy`, `wl-paste`, `xdpyinfo` and
-  every Linux GUI app hang; `wl-clipboard` is installed but inert. `DISPLAY` is unset
-  anyway (see above). Do not propose anything that needs a display.
+- **I get here over SSH**, not through `wsl.exe`: `sshd -D` → `sshd-session` → `zsh` →
+  `claude` (check with `ps -o args= -p $PPID` up the tree). The distro is started at boot
+  by a scheduled task and is only ever reached by ssh, so no session in it inherits WSL's
+  interop environment. `WSL_DISTRO_NAME`, `WSL_INTEROP`, `DISPLAY`, `WAYLAND_DISPLAY` are
+  all unset, and `PATH` is whatever pam_env read out of `/etc/environment` — the Windows
+  entries interop appends (19 of them, `wsl.exe -e sh -c 'echo $PATH'` shows them) never
+  reach the shell. Consequences: `clip.exe` is NOT on PATH by default (`.zshenv` puts
+  `/mnt/c/Windows/System32` back), and any "am I on WSL?" test written against
+  `$WSL_DISTRO_NAME` is false on the one machine it was written for — probe the binary.
+  Interop itself still works: `/init` falls back to `/run/WSL/1_interop`, so `.exe` files
+  run fine, they just land in Windows **session 0**.
+- WSLg cannot work here, and it is the autostart that decides that, not a bug in WSL.
+  The instance is created at boot by a `schtasks` task (`wsl.exe -d Ubuntu -u root -e
+  sleep infinity`, see github.com/Gin111191/wsl-autostart) and afterwards only ever
+  reached by ssh, so no interactive Windows desktop session is ever bound to it: every
+  interop socket in `/run/WSL/` dates from boot and lands in session 0, while the desktop
+  is session 1 (`query.exe session`). `msrdc.exe`, the Windows half of WSLg, therefore
+  starts with nothing to draw on, drops the RDP peer after **101.7 s**, and weston's
+  `rdp-backend.so` NULL-derefs on the disconnect path (`segfault at 218`, see
+  `/mnt/wslg/stderr.log` and `dmesg | grep weston`). WSLGd restarts it, forever: ~850
+  SIGSEGVs and ~13 MB of `/mnt/wslg/weston.log` per day. Xwayland loses its compositor in
+  the same cycle (`(EE) could not connect to wayland server`), which is why `xdpyinfo`
+  hangs rather than fails. Updating WSL does not help (2.7.14.0 / WSLg 1.0.73.2 still
+  loops); the only real choices are `guiApplications=false` in `%USERPROFILE%\.wslconfig`
+  to stop the loop, or giving up pre-login ssh and creating the instance from a logged-in
+  desktop. So: no Wayland, no X11, `wl-copy`/`wl-paste`/`xdpyinfo` and every Linux GUI app
+  hang, `wl-clipboard` is inert. Do not propose anything that needs a display.
