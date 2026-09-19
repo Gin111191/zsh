@@ -7,7 +7,7 @@ format = """
 $os\
 $username\
 [](bg:color_yellow fg:color_orange)\
-$directory\
+${env_var.PROMPT_DIR}\
 [ ](fg:color_yellow)\
 $character"""
 
@@ -82,18 +82,9 @@ style_user = "bg:color_orange fg:color_fg_dark"
 style_root = "bg:color_orange fg:color_fg_dark"
 format = '[ $user ]($style)'
 
-[directory]
+[env_var.PROMPT_DIR]
 style = "fg:color_fg_dark bg:color_yellow"
-format = "[ $path ]($style)"
-truncation_length = 1
-truncation_symbol = "…/"
-
-[directory.substitutions]
-"Documents" = "󰈙 "
-"Downloads" = " "
-"Music" = "󰝚 "
-"Pictures" = " "
-"Developer" = "󰲋 "
+format = "[ $env_value ]($style)"
 
 [git_branch]
 symbol = ""

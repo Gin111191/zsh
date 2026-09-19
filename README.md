@@ -15,8 +15,8 @@ Based on [radleylewis/zsh](https://github.com/radleylewis/zsh), with my own cust
 | `clipboard.zsh` | Shared clipboard for vi-mode yank/paste — tmux paste-buffer as the single store |
 | `fzf.zsh` | fzf defaults (fd-backed, bat preview), `Ctrl+F` file/folder picker with hidden files |
 | `plugins.zsh` | Tiny built-in plugin manager (git clone on first launch, `zplugin-update` to update) |
-| `prompt.zsh` | Prompt housekeeping (`VIRTUAL_ENV_DISABLE_PROMPT`) |
-| `starship.toml` | Starship prompt: a one-line Dusk-Navy powerline bar after a blank line — OS icon and the current folder on the left (user only over SSH or as root); git branch/status, runtime versions, conda env on the right |
+| `prompt.zsh` | Prompt housekeeping (`VIRTUAL_ENV_DISABLE_PROMPT`) and the shortened path the prompt shows |
+| `starship.toml` | Starship prompt: a one-line Dusk-Navy powerline bar after a blank line — OS icon and the last two folders on the left (parent name cut short with … past 25 characters; user only over SSH or as root); git branch/status, runtime versions, conda env on the right |
 | `starship-contrast.py` | Checks every prompt colour pair against WCAG AA — run it after editing the palette |
 | `claude/CLAUDE.md` | Global rules for Claude Code — symlinked to `~/.claude/CLAUDE.md` (see below) |
 
