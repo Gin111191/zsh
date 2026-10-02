@@ -56,6 +56,9 @@ Where Neovim runs with claudecode.nvim (the Mac), what Gin asks to see goes to N
   after every Edit/Write — the file opens in the project's Neovim and the change is highlighted
   there. So do not paste diffs or code back into chat and do not re-Read a file just to show it;
   say in one line what changed.
+- **Edit with Edit/Write, not Python/sed through Bash.** Only Edit/Write fire the hook; a script edit
+  bypasses it and Gin sees nothing in Neovim. After a scripted bulk edit (same pattern in many files),
+  run `~/.claude/hooks/nvim-open.sh open <path>` for each changed file. Same for work a subagent did.
 - **To show a file or present something** (to review, to look at): run
   `~/.claude/hooks/nvim-open.sh open <path>[:line]` instead of dumping contents into chat. It opens
   in a code window without moving focus, and does nothing (exit 0, no output) when no Neovim is
