@@ -50,6 +50,21 @@ alone. Each check below is one cheap command; run it instead of guessing.
 Anything verified on one specific box goes in a `## Machine: …` section below, so the
 generic rules stay true everywhere.
 
+## Showing files and edits — Neovim first
+Where Neovim runs with claudecode.nvim (the Mac), what Gin asks to see goes to Neovim, not chat.
+- **Edits are already handled**: `settings.json` hooks run `~/.claude/hooks/nvim-open.sh` before and
+  after every Edit/Write — the file opens in the project's Neovim and the change is highlighted
+  there. So do not paste diffs or code back into chat and do not re-Read a file just to show it;
+  say in one line what changed.
+- **To show a file or present something** (to review, to look at): run
+  `~/.claude/hooks/nvim-open.sh open <path>[:line]` instead of dumping contents into chat. It opens
+  in a code window without moving focus, and does nothing (exit 0, no output) when no Neovim is
+  running for that project — then fall back to chat.
+- Never `:edit` through the Neovim RPC socket yourself: the focused window is usually the Claude
+  terminal and `:edit` replaces the chat. The script picks a code window.
+- It finds Neovim from `~/.claude/ide/*.lock`, so the claudecode.nvim server must be running
+  (`Space+a+c` once, or `:ClaudeCodeStart`). More in nvim-config's CHEATSHEET.md.
+
 ## Machine: WSL2, Ubuntu 26.04, hostname GIN-PC
 - Windows drives mount at `/mnt/c`, `/mnt/d` and `/mnt/f`. I/O there is ~10x slower than the
   Linux side — never search `/mnt/*` unless asked explicitly.
