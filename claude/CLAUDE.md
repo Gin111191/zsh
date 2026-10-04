@@ -68,6 +68,11 @@ Where Neovim runs (the Mac), what Gin asks to see goes to Neovim, not chat.
   `<project>/.shots/screenshots.md` (ignored by git on its own) and opens it at the link; snacks.nvim
   draws the float there. The float is OFF by default in nvim-config — tell Gin `<leader>ti` in that
   buffer. Link, never copy, the image; Gin opens a big one himself. Gin, 2026-10-04.
+  The caption is a full line: what it shows · which screen or record · the open point it serves
+  (e.g. `Gửi hàng popup · SO-000057 COD + 300,000 deposit · do the two boxes read right?`).
+  The file holds ONLY images of discussions still open — never a pile from many chats: when a point is
+  settled, delete its `##` section with Edit at once; at the start of a session, prune what is no
+  longer open. Gin: "không để quá nhiều ảnh từ nhiều lần chat vào 1 lúc".
 - Never `:edit` through the Neovim RPC socket yourself: the focused window is usually the Claude
   terminal and `:edit` replaces the chat. The script picks a code window.
 
