@@ -63,6 +63,11 @@ Where Neovim runs (the Mac), what Gin asks to see goes to Neovim, not chat.
   `~/.claude/hooks/nvim-open.sh open <path>[:line]` instead of dumping contents into chat. It opens
   in a code window without moving focus, and does nothing (exit 0, no output) when no Neovim is
   running for that project — then fall back to chat.
+- **A screenshot or any image for Gin**: the chat cannot draw it, a bare path in chat is "khá bất tiện".
+  Run `~/.claude/hooks/nvim-open.sh shot <image> "<what it shows>"` — it appends a Markdown link to
+  `<project>/.shots/screenshots.md` (ignored by git on its own) and opens it at the link; snacks.nvim
+  draws the float there. The float is OFF by default in nvim-config — tell Gin `<leader>ti` in that
+  buffer. Link, never copy, the image; Gin opens a big one himself. Gin, 2026-10-04.
 - Never `:edit` through the Neovim RPC socket yourself: the focused window is usually the Claude
   terminal and `:edit` replaces the chat. The script picks a code window.
 
